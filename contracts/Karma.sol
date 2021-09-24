@@ -3,24 +3,24 @@ pragma solidity >=0.4.22 <0.9.0;
 
 contract Karma {
   address admin;
-  mapping(address => uint) public karmaMap;
+  mapping(address => mapping(address => uint)) public karmaMap;
   mapping(address => bool) public isAuthorized;
-  constructor() {
+  constructor()  {
     admin = msg.sender;
   }
 
-  function getKarma() public view returns (uint karma) {
-      karma = karmaMap[msg.sender];
+  function getKarma(address appAddr, address addr) public view returns (uint karma) {
+      karma = karmaMap[appAddr][addr];
   }
   function raiseKarma(address addr, uint amount) public payable {
       require(msg.value > 1);
       require(isAuthorized[msg.sender], "Sender not authorized.");
-      karmaMap[addr] += amount;
+      karmaMap[msg.sender][addr] += amount;
   }
   function lowerKarma(address addr, uint amount) public payable {
       require(msg.value > 1);
       require(isAuthorized[msg.sender]);
-      karmaMap[addr] -= amount;
+      karmaMap[msg.sender][addr] -= amount;
   }
   function authorize(address addr) public {
       require(msg.sender == admin);
