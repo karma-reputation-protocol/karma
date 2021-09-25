@@ -38,6 +38,7 @@ contract Karma {
 
       // += e/log2(k)
       uint increment = amount/log2;  //TODO tryDiv --  https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol#L63
+      karmaMap[msg.sender][addr] += increment;
   }
   function destroyKarma(address addr, uint amount) public payable {
       require(msg.value > 1);
