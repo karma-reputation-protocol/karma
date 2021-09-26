@@ -23,7 +23,7 @@ contract Karma {
       uint weight = 30; // over 100 = 0.3
 
       uint256 decayed_karma = karma.mul(uint(100).sub(weight)).div(100);
-      uint256 new_karma = decayed_karma.add((amount * weight)/100); // TODO prevent potential overflow
+      uint256 new_karma = decayed_karma.add((amount.mul(weight)).div(100)); // TODO prevent potential overflow
 
       karmaMap[msg.sender][addr] = new_karma;
   }
