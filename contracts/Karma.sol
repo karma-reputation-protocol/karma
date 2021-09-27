@@ -2,11 +2,11 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 contract Karma {
-  
+
   struct userKarma {
-   unit256 karma;
-   unit64 lastUpdateTimestamp;
-   type64 creationTimestap;
+   uint256 karma;
+   uint64 lastUpdateTimestamp;
+   uint64 creationTimestap;
   }
 
   address admin;
