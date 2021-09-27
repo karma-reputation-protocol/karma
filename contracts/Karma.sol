@@ -2,8 +2,15 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 contract Karma {
+  
+  struct userKarma {
+   unit256 karma;
+   unit64 lastUpdateTimestamp;
+   type64 creationTimestap;
+  }
+
   address admin;
-  mapping(address => mapping(address => uint)) public karmaMap;
+  mapping(address => mapping(address => uint)) public karmaMap; // TODO map to struct userKarma
   mapping(address => bool) public isAuthorized;
   constructor()  {
     admin = msg.sender;
@@ -32,7 +39,7 @@ contract Karma {
       uint weight = 40; // over 100 = 0.4
 
       uint256 decayed_karma = (karma * (100-weight))/100;
-      uint256 decrease = (amount * weight); //TODO bug here (when going below 0 karma?)
+      uint128 decrease = (amount * weight); //TODO bug here (when going below 0 karma?)
       decrease = decrease/100;
 
       if (decayed_karma >= decrease) {
