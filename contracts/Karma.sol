@@ -22,8 +22,12 @@ contract Karma {
       uint256 karma = karmaMap[msg.sender][addr];
       uint weight = 30; // over 100 = 0.3
 
-      uint256 decayed_karma = karma.mul(uint(100).sub(weight)).div(100);
-      uint256 new_karma = decayed_karma.add((amount.mul(weight)).div(100)); // TODO prevent potential overflow
+      uint256 weightDiff = uint(100).sub(weight);
+      uint256 decayed_karma = karma.mul(weightDiff);
+      decayed_karma = decayed_karma.div(100);
+      uint256 weightedAmount = amount.mul(weight);
+      uint256 increase = weightedAmount.div(100);
+      uint256 new_karma = decayed_karma.add(increase); 
 
       karmaMap[msg.sender][addr] = new_karma;
   }
@@ -34,7 +38,9 @@ contract Karma {
       uint256 karma = karmaMap[msg.sender][addr];
       uint weight = 40; // over 100 = 0.4
 
-      uint256 decayed_karma = karma.mul(uint(100).sub(weight)).div(100);
+      uint256 weightDiff = uint(100).sub(weight);
+      uint256 decayed_karma = karma.mul(weightDiff);
+      decayed_karma = decayed_karma.div(100);
       uint256 decrease = amount.mul(weight); //TODO bug here (when going below 0 karma?)
       decrease = decrease.div(100);
 
