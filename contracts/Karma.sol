@@ -71,7 +71,7 @@ contract Karma {
         isAuthorized[addr] = false;
     }
     function optOut(address addr) external {
-    	// allosws user to stop being tracked
+    	// allows user to stop being tracked
 	//TODO implement
     }
 }
