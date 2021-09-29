@@ -25,12 +25,12 @@ contract dApp {
         return Karma.lowerKarma{value: msg.value}(addr, amount);
     }
     
-    function CallAuthorize(address addr) external {
+    function callAuthorize(address addr) external {
         InterfaceKarma Karma = InterfaceKarma(karmaAddress);
         Karma.authorize(addr);
     }
     
-    function CallDeAuthorize(address addr) external {
+    function callDeAuthorize(address addr) external {
         InterfaceKarma Karma = InterfaceKarma(karmaAddress);
         Karma.deAuthorize(addr);
     }
