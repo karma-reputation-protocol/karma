@@ -70,4 +70,8 @@ contract Karma {
         require(msg.sender == admin);
         isAuthorized[addr] = false;
     }
+    function optOut(address addr) external {
+    	// allosws user to stop being tracked
+	//TODO implement
+    }
 }
