@@ -15,18 +15,47 @@ contract Karma {
     using SafeMath for uint256;
     address admin;
     mapping(address => mapping(address => uint)) public karmaMap;
+    mapping(address => mapping(address => bool)) public optedOut;
+    mapping(address => bool) public optedOutAll;
     mapping(address => bool) public isAuthorized;
     constructor()  {
         admin = msg.sender;
     }
 
-    function getKarma(address appAddr, address addr) external view returns (uint karma) {
+    modifier onlyAuthorized() {
+        require(isAuthorized[msg.sender], "Sender not authorized.");
+        _;
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Sender must be contract admin");
+        _;
+    } 
+
+    modifier costs(uint price) {
+        require(msg.value >= price);
+        _;
+    }
+
+    modifier mustOptIn(address appAddr, address addr) {
+        require(!optedOut[appAddr][addr] && !optedOutAll[addr], "Address has opted out of Karma for this application");
+        _;
+    }
+
+    function getKarma(address appAddr, address addr) 
+    external 
+    view 
+    mustOptIn(appAddr, addr)
+    returns (uint karma) {
         karma = karmaMap[appAddr][addr];
     }
-    function raiseKarma(address addr, uint amount) external payable {
-        require(msg.value > 1);
-        require(isAuthorized[msg.sender], "Sender not authorized.");
 
+    function raiseKarma(address addr, uint amount) 
+    external 
+    payable 
+    onlyAuthorized 
+    mustOptIn(msg.sender, addr)
+    costs(1) {
         uint256 karma = karmaMap[msg.sender][addr];
         uint weight = 30; // over 100 = 0.3
 
@@ -39,10 +68,13 @@ contract Karma {
 
         karmaMap[msg.sender][addr] = new_karma;
     }
-    function lowerKarma(address addr, uint amount) external payable {
-        require(msg.value > 1);
-        require(isAuthorized[msg.sender], "Sender not authorized.");
 
+    function lowerKarma(address addr, uint amount) 
+    external 
+    payable 
+    onlyAuthorized 
+    mustOptIn(msg.sender, addr)
+    costs(1) {
         uint256 karma = karmaMap[msg.sender][addr];
         uint weight = 40; // over 100 = 0.4
 
@@ -61,17 +93,29 @@ contract Karma {
         }
 
     }
-    function authorize(address addr) external {
+    function authorize(address addr) 
+    external 
+    onlyAdmin {
         require(msg.sender == admin);
         isAuthorized[addr] = true;
     }
 
-    function deAuthorize(address addr) external {
+    function deAuthorize(address addr) 
+    external 
+    onlyAdmin {
         require(msg.sender == admin);
         isAuthorized[addr] = false;
     }
-    function optOut(address addr) external {
-    	// allows user to stop being tracked
-	//TODO implement
+
+    function optOut(address appAddr) 
+    external {
+    	karmaMap[appAddr][msg.sender] = 0;
+        optedOut[appAddr][msg.sender] = true;
     }
+
+    function optOutAll() 
+    external {
+        optedOutAll[msg.sender] = true;
+    }
+
 }
