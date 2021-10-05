@@ -5,8 +5,8 @@ import {SafeMath} from '../dependencies/SafeMath.sol';
 
 interface InterfaceKarma {
     function getKarma(address appAddr, address addr) external view returns (uint karma);
-    function raiseKarma(address addr, uint amount) external payable;
-    function lowerKarma(address addr, uint amount) external payable;
+    function generateKarma(address addr, uint amount) external payable;
+    function destroyKarma(address addr, uint amount) external payable;
     function authorize(address addr) external;
     function deAuthorize(address addr) external;
 }
@@ -30,7 +30,7 @@ contract Karma {
     modifier onlyAdmin() {
         require(msg.sender == admin, "Sender must be contract admin");
         _;
-    } 
+    }
 
     modifier costs(uint price) {
         require(msg.value >= price);
@@ -42,18 +42,18 @@ contract Karma {
         _;
     }
 
-    function getKarma(address appAddr, address addr) 
-    external 
-    view 
+    function getKarma(address appAddr, address addr)
+    external
+    view
     mustOptIn(appAddr, addr)
     returns (uint karma) {
         karma = karmaMap[appAddr][addr];
     }
 
-    function raiseKarma(address addr, uint amount) 
-    external 
-    payable 
-    onlyAuthorized 
+    function generateKarma(address addr, uint amount)
+    external
+    payable
+    onlyAuthorized
     mustOptIn(msg.sender, addr)
     costs(1) {
         uint256 karma = karmaMap[msg.sender][addr];
@@ -64,15 +64,15 @@ contract Karma {
         decayed_karma = decayed_karma.div(100);
         uint256 weightedAmount = amount.mul(weight);
         uint256 increase = weightedAmount.div(100);
-        uint256 new_karma = decayed_karma.add(increase); 
+        uint256 new_karma = decayed_karma.add(increase);
 
         karmaMap[msg.sender][addr] = new_karma;
     }
 
-    function lowerKarma(address addr, uint amount) 
-    external 
-    payable 
-    onlyAuthorized 
+    function destroyKarma(address addr, uint amount)
+    external
+    payable
+    onlyAuthorized
     mustOptIn(msg.sender, addr)
     costs(1) {
         uint256 karma = karmaMap[msg.sender][addr];
@@ -93,27 +93,27 @@ contract Karma {
         }
 
     }
-    function authorize(address addr) 
-    external 
+    function authorize(address addr)
+    external
     onlyAdmin {
         require(msg.sender == admin);
         isAuthorized[addr] = true;
     }
 
-    function deAuthorize(address addr) 
-    external 
+    function deAuthorize(address addr)
+    external
     onlyAdmin {
         require(msg.sender == admin);
         isAuthorized[addr] = false;
     }
 
-    function optOut(address appAddr) 
+    function optOut(address appAddr)
     external {
     	karmaMap[appAddr][msg.sender] = 0;
         optedOut[appAddr][msg.sender] = true;
     }
 
-    function optOutAll() 
+    function optOutAll()
     external {
         optedOutAll[msg.sender] = true;
     }

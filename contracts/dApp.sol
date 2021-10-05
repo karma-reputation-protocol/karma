@@ -5,31 +5,31 @@ import './Karma.sol';
 
 contract dApp {
     address karmaAddress;
-    
+
     function setKarmaAddress(address _karmaAddress) external {
         karmaAddress = _karmaAddress;
     }
-    
+
     function callGetKarma(address appAddr, address addr) external view returns (uint karma) {
         InterfaceKarma Karma = InterfaceKarma(karmaAddress);
         return Karma.getKarma(appAddr, addr);
     }
-    
-    function callRaiseKarma(address addr, uint amount) external payable {
+
+    function callGenerateKarma(address addr, uint amount) external payable {
         InterfaceKarma Karma = InterfaceKarma(karmaAddress);
-        return Karma.raiseKarma{value: msg.value}(addr, amount);
+        return Karma.generateKarma{value: msg.value}(addr, amount);
     }
-    
-    function callLowerKarma(address addr, uint amount) external payable {
+
+    function callDestroyKarma(address addr, uint amount) external payable {
         InterfaceKarma Karma = InterfaceKarma(karmaAddress);
-        return Karma.lowerKarma{value: msg.value}(addr, amount);
+        return Karma.destroyKarma{value: msg.value}(addr, amount);
     }
-    
+
     function callAuthorize(address addr) external {
         InterfaceKarma Karma = InterfaceKarma(karmaAddress);
         Karma.authorize(addr);
     }
-    
+
     function callDeAuthorize(address addr) external {
         InterfaceKarma Karma = InterfaceKarma(karmaAddress);
         Karma.deAuthorize(addr);
