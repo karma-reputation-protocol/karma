@@ -20,13 +20,24 @@ contract Karma {
         admin = msg.sender;
     }
 
+    modifier onlyAuthorized() {
+        require(isAuthorized[msg.sender], "Sender not authorized.");
+        _;
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Sender must be contract admin");
+        _;
+    } 
+
+    modifier costs(uint price) {
+        require(msg.value >= price);
+    }
+
     function getKarma(address appAddr, address addr) external view returns (uint karma) {
         karma = karmaMap[appAddr][addr];
     }
-    function raiseKarma(address addr, uint amount) external payable {
-        require(msg.value > 1);
-        require(isAuthorized[msg.sender], "Sender not authorized.");
-
+    function raiseKarma(address addr, uint amount) external payable onlyAuthorized costs(1){
         uint256 karma = karmaMap[msg.sender][addr];
         uint weight = 30; // over 100 = 0.3
 
@@ -39,10 +50,7 @@ contract Karma {
 
         karmaMap[msg.sender][addr] = new_karma;
     }
-    function lowerKarma(address addr, uint amount) external payable {
-        require(msg.value > 1);
-        require(isAuthorized[msg.sender], "Sender not authorized.");
-
+    function lowerKarma(address addr, uint amount) external payable onlyAuthorized costs(1){
         uint256 karma = karmaMap[msg.sender][addr];
         uint weight = 40; // over 100 = 0.4
 
@@ -61,12 +69,12 @@ contract Karma {
         }
 
     }
-    function authorize(address addr) external {
+    function authorize(address addr) external onlyAdmin {
         require(msg.sender == admin);
         isAuthorized[addr] = true;
     }
 
-    function deAuthorize(address addr) external {
+    function deAuthorize(address addr) external onlyAdmin {
         require(msg.sender == admin);
         isAuthorized[addr] = false;
     }
