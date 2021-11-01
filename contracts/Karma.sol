@@ -1,43 +1,28 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.4.22 <0.9.0;
-
-import {SafeMath} from '../dependencies/SafeMath.sol';
+pragma solidity 0.8;
 
 interface InterfaceKarma {
     function getKarma(address appAddr, address addr) external view returns (uint karma);
-    function raiseKarma(address addr, uint amount) external payable;
-    function lowerKarma(address addr, uint amount) external payable;
-    function authorize(address addr) external;
-    function deAuthorize(address addr) external;
+    function updateKarma(address addr, int amount) external payable;
+}
+
+struct KarmaStruct {
+    uint value;  
+    uint updateCount;  
 }
 
 contract Karma {
-    using SafeMath for uint256;
-    address admin;
-    mapping(address => mapping(address => uint)) public karmaMap;
+    mapping(address => mapping(address => KarmaStruct)) public karmaMap;
     mapping(address => mapping(address => bool)) public optedOut;
     mapping(address => bool) public optedOutAll;
-    mapping(address => bool) public isAuthorized;
-    constructor()  {
-        admin = msg.sender;
-    }
-
-    modifier onlyAuthorized() {
-        require(isAuthorized[msg.sender], "Sender not authorized.");
-        _;
-    }
-
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Sender must be contract admin");
-        _;
-    } 
+    event karmaUpdated(address app, address user, int amount);
 
     modifier costs(uint price) {
         require(msg.value >= price);
         _;
     }
 
-    modifier mustOptIn(address appAddr, address addr) {
+    modifier notOptOut(address appAddr, address addr) {
         require(!optedOut[appAddr][addr] && !optedOutAll[addr], "Address has opted out of Karma for this application");
         _;
     }
@@ -45,71 +30,68 @@ contract Karma {
     function getKarma(address appAddr, address addr) 
     external 
     view 
-    mustOptIn(appAddr, addr)
+    notOptOut(appAddr, addr)
     returns (uint karma) {
-        karma = karmaMap[appAddr][addr];
+        karma = karmaMap[appAddr][addr].value;
     }
 
-    function raiseKarma(address addr, uint amount) 
+    function updateKarma(address addr, int amount, uint16 updateFunctionKey) 
     external 
     payable 
-    onlyAuthorized 
-    mustOptIn(msg.sender, addr)
-    costs(1) {
-        uint256 karma = karmaMap[msg.sender][addr];
-        uint weight = 30; // over 100 = 0.3
-
-        uint256 weightDiff = uint(100).sub(weight);
-        uint256 decayed_karma = karma.mul(weightDiff);
-        decayed_karma = decayed_karma.div(100);
-        uint256 weightedAmount = amount.mul(weight);
-        uint256 increase = weightedAmount.div(100);
-        uint256 new_karma = decayed_karma.add(increase); 
-
-        karmaMap[msg.sender][addr] = new_karma;
-    }
-
-    function lowerKarma(address addr, uint amount) 
-    external 
-    payable 
-    onlyAuthorized 
-    mustOptIn(msg.sender, addr)
-    costs(1) {
-        uint256 karma = karmaMap[msg.sender][addr];
-        uint weight = 40; // over 100 = 0.4
-
-        uint256 weightDiff = uint(100).sub(weight);
-        uint256 decayed_karma = karma.mul(weightDiff);
-        decayed_karma = decayed_karma.div(100);
-        uint256 decrease = amount.mul(weight); //TODO bug here (when going below 0 karma?)
-        decrease = decrease.div(100);
-
-        if (decayed_karma >= decrease) {
-            uint256 new_karma = decayed_karma.sub(decrease);
-            karmaMap[msg.sender][addr] = new_karma;
+    notOptOut(msg.sender, addr)
+    {
+        KarmaStruct storage karma = karmaMap[msg.sender][addr];
+        if (updateFunctionKey == 1) {
+            updateByAdd(karma, amount);
+        } else if (updateFunctionKey == 2) {
+            updateByAvg(karma, amount);
+        } else {
+            revert("updateFunctionKey is not valid");
         }
-        else {
-            karmaMap[msg.sender][addr] = 0;
+        emit karmaUpdated(msg.sender, addr, amount);
+    }
+
+
+    // karma update functions 
+
+    function updateByAdd(KarmaStruct storage karma, int update) 
+    internal 
+    {
+        int weight = 30; 
+        int weightDiff = 100 - weight;
+        int decayedKarma = int(karma.value) * weightDiff;
+
+        decayedKarma /= 100;
+        
+
+        int weightedAmount = update * weight;
+        weightedAmount = weightedAmount / 100;
+        uint tentativeValue = uint(decayedKarma + weightedAmount);
+
+        if (karma.value + tentativeValue < 0) {
+            karma.value = 0;
+        } else {
+            karma.value = tentativeValue;
         }
-
-    }
-    function authorize(address addr) 
-    external 
-    onlyAdmin {
-        require(msg.sender == admin);
-        isAuthorized[addr] = true;
+        
     }
 
-    function deAuthorize(address addr) 
-    external 
-    onlyAdmin {
-        require(msg.sender == admin);
-        isAuthorized[addr] = false;
+    function updateByAvg(KarmaStruct storage karma, int update) 
+    internal 
+    {
+        karma.updateCount += 1;
+        int diff = update - int(karma.value);
+        int tentativeValue = int(karma.value) + (diff / int(karma.updateCount));    
+        if (tentativeValue < 0) {
+            karma.value = 0;
+        } else {
+            karma.value = uint(tentativeValue);
+        }
     }
 
     function optOut(address appAddr) 
     external {
-    	karmaMap[appAddr][msg.sender] = 0;
+    	karmaMap[appAddr][msg.sender].value = 0;
         optedOut[appAddr][msg.sender] = true;
     }
 
@@ -117,5 +99,4 @@ contract Karma {
     external {
         optedOutAll[msg.sender] = true;
     }
-
 }
