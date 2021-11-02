@@ -15,3 +15,15 @@ There are currently two ways to update a user's karma value. The first is by wei
 ## Opting out
 
 If a user wishes to opt out of being tracked, they must call either the optOut(addrress) or optOutAll() methods of the Karma contract. The optOut(address) method will block future updates to their karma value for the application deployed at the address specified and set it to 0. The optOutAll() will block future updates to the user's karma across all applications. In both cases, a getKarma() call for the user will result in a revert.
+
+## Karma deployment details:
+
+### Celo Network
+
+#### Main net
+
+{INSERT ADDRESS HERE}
+
+#### Alfajores
+
+{INSERT ADDRESS HERE}
