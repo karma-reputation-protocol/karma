@@ -4,7 +4,7 @@ Karma enables dApps to keep a ledger of user integrity. The dApp is free to deci
 
 ## Using Karma in your dApp
 
-Virtually no setup is required. To start tracking the behavior of your app's users with Karma, simply call the updateKarma() method of the Karma contract with the desired user's address and the value you want to add to their Karma. Now, when you call getKarma() for that user's address, the Karma contract will return the user's current karma value. (Note: Karma is initially set to 0 for all users and cannot become negative).
+Virtually no setup is required. To start tracking the behavior of your app's users with Karma, simply call the updateKarma() method of the Karma contract with the desired user's address and the value you want to add to their Karma. Now, when you call getKarma() for that user's address, the Karma contract will return the user's updated karma value. (Note: Karma is initially set to 0 for all users and cannot become negative).
 
 ## Updating your users karma
 
