@@ -1,24 +1,30 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8;
 
-interface InterfaceKarma {
-    function getKarma(address appAddr, address addr) external view returns (uint karma);
-    function updateKarma(address addr, int amount, uint16 updateFunctionKey) external payable;
+interface InterfaceKarmaStore {
+    function readKarma(address appAddr, address addr) external view returns (KarmaStruct memory karma);
+    function writeKarma(address appAddr, address addr, uint value, uint[] calldata metadata) external;
 }
 
 struct KarmaStruct {
     uint value;  
-    uint updateCount;  
+    uint[] metadata;  
 }
 
 contract Karma {
-    mapping(address => mapping(address => KarmaStruct)) public karmaMap;
+
+    address admin;
+    InterfaceKarmaStore KarmaStore;
     mapping(address => mapping(address => bool)) public optedOut;
     mapping(address => bool) public optedOutAll;
     event karmaUpdated(address app, address user, int amount);
 
-    modifier costs(uint price) {
-        require(msg.value >= price);
+    constructor() {
+        admin = msg.sender;
+    }
+
+    modifier isAdmin(address sender) {
+        require(sender == admin, "Sender must be Karma admin");
         _;
     }
 
@@ -39,10 +45,11 @@ contract Karma {
     **/
     function getKarma(address appAddr, address addr) 
     external 
-    view 
+    view
     notOptOut(appAddr, addr)
-    returns (uint karma) {
-        karma = karmaMap[appAddr][addr].value;
+    returns (uint256 karma) {
+        KarmaStruct memory karmaObject = KarmaStore.readKarma(appAddr, addr);
+        karma = karmaObject.value;
     }
 
     /**
@@ -57,32 +64,29 @@ contract Karma {
                                See README for details. 
     **/
     function updateKarma(address addr, int amount, uint16 updateFunctionKey) 
-    external 
-    payable 
+    external  
     notOptOut(msg.sender, addr)
     {
-        KarmaStruct storage karma = karmaMap[msg.sender][addr];
+        KarmaStruct memory karma = KarmaStore.readKarma(msg.sender, addr);
         if (updateFunctionKey == 1) {
-            updateByAdd(karma, amount);
+            updateByAdd(msg.sender, addr, karma, amount);
         } else if (updateFunctionKey == 2) {
-            updateByAvg(karma, amount);
+            updateByAvg(msg.sender, addr, karma, amount);
         } else {
             revert("updateFunctionKey is not valid");
         }
-        emit karmaUpdated(msg.sender, addr, amount);
     }
-
-
-    // karma update functions 
 
     /**
     * @dev Function used to update karma through a weighted sum
+    * @param appAddr  The address of the application updating karma
+    * @param addr  The address of the user whose karma is being updated
     * @param karma  The karma object of a user for a given contract address
     * @param update The amount used to calculate how much should be added or removed from
                     a user's karma value. If the amount is positive, it will increase the 
                     user's karma. If it is negative, it will decrease it. 
     **/
-    function updateByAdd(KarmaStruct storage karma, int update) 
+    function updateByAdd(address appAddr, address addr, KarmaStruct memory karma, int update) 
     internal 
     {
         int weight = 30; 
@@ -91,36 +95,43 @@ contract Karma {
 
         decayedKarma /= 100;
         
-
         int weightedAmount = update * weight;
         weightedAmount = weightedAmount / 100;
         uint tentativeValue = uint(decayedKarma + weightedAmount);
 
         if (karma.value + tentativeValue < 0) {
             karma.value = 0;
+            KarmaStore.writeKarma(appAddr, addr, karma.value, karma.metadata);
         } else {
             karma.value = tentativeValue;
+            KarmaStore.writeKarma(appAddr, addr, karma.value, karma.metadata);
         }
-        
     }
 
     /**
     * @dev Function used to update karma through an averaged sum
+    * @param appAddr The address of the application updating karma
+    * @param addr  The address of the user whose karma is being updated
     * @param karma  The karma object of a user for a given contract address
     * @param update The amount used to calculate how much should be added or removed from
                     a user's karma value. If the amount is positive, it will increase the 
                     user's karma. If it is negative, it will decrease it. 
     **/
-    function updateByAvg(KarmaStruct storage karma, int update) 
+    function updateByAvg(address appAddr, address addr, KarmaStruct memory karma, int update) 
     internal 
     {
-        karma.updateCount += 1;
+        uint[] memory metadata = karma.metadata;
+        if (metadata.length == 0) {
+            metadata = new uint[](5);
+        }
+        metadata[0] = metadata[0] + 1;
         int diff = update - int(karma.value);
-        int tentativeValue = int(karma.value) + (diff / int(karma.updateCount));    
+        int tentativeValue = int(karma.value) + (diff / int(metadata[0]));    
         if (tentativeValue < 0) {
-            karma.value = 0;
+            KarmaStore.writeKarma(appAddr, addr, 0, metadata);
         } else {
             karma.value = uint(tentativeValue);
+            KarmaStore.writeKarma(appAddr, addr, karma.value, metadata);
         }
     }
 
@@ -132,7 +143,6 @@ contract Karma {
     **/
     function optOut(address appAddr) 
     external {
-    	karmaMap[appAddr][msg.sender].value = 0;
         optedOut[appAddr][msg.sender] = true;
     }
 
@@ -142,5 +152,27 @@ contract Karma {
     function optOutAll() 
     external {
         optedOutAll[msg.sender] = true;
+    }
+
+    /**
+    * @dev Function to instantiate KarmaStore contract
+    * @param karmaStoreAddress Address of the KarmaStore contract
+    **/
+    function setKarmaStore(address karmaStoreAddress)
+    external
+    isAdmin(msg.sender)
+    {
+        KarmaStore = InterfaceKarmaStore(karmaStoreAddress);
+    }
+
+    /**
+    * @dev Function to set the address of the contract admin
+    * @param newAdminAddress The address of the new Karma admin
+    **/
+    function setAdminAddress(address newAdminAddress)
+    external
+    isAdmin(msg.sender)
+    {
+        admin = newAdminAddress;
     }
 }
