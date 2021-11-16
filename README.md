@@ -26,4 +26,4 @@ If a user wishes to opt out of being tracked, they must call either the optOut(a
 
 #### Alfajores
 
-{INSERT ADDRESS HERE}
+0x66A98DA8A64698818C0bffa41f5465A1BECf1CFf
